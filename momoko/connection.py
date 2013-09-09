@@ -84,9 +84,23 @@ class Pool:
             multi_callback, self._ioloop)
 
     def _get_connection(self):
+        # If pool is empty, create new connections
+        if not self._pool:
+            for i in range(self.size):
+                self._new()
+
+        # if connection have not been created, raise exception
+        if not self._pool:
+            raise PoolError('Connection pool is empty')
+
         for connection in self._pool:
             if not connection.busy():
-                return connection
+                if connection.closed:
+                    self._pool.remove(connection)
+                    self._new()
+                    return self._get_connection()
+                else:
+                    return connection
 
     def transaction(self,
         statements,
